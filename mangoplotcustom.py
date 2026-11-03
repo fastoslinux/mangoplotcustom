@@ -12,11 +12,22 @@ from typing import List
 
 import numpy as np
 import matplotlib
-matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Cursor
 
-plt.rcParams['font.family'] = "Lato,serif"
+# Escolhe o primeiro backend interativo que estiver instalado.
+# (TkAgg precisa do pacote python3-tkinter; no Fedora/toolbox: sudo dnf install python3-tkinter)
+for _backend in ("TkAgg", "QtAgg", "GTK4Agg", "GTK3Agg", "WXAgg"):
+    try:
+        plt.switch_backend(_backend)
+        print(f"Usando backend: {_backend}")
+        break
+    except Exception:
+        continue
+else:
+    raise SystemExit("Nenhum backend grafico disponivel. Instale: sudo dnf install python3-tkinter")
+
+plt.rcParams['font.family'] = ["Lato", "DejaVu Sans", "sans-serif"]
 plt.rcParams['font.weight'] = "600"
 
 # Cores e estilo
@@ -199,6 +210,12 @@ def plot_all_benchmarks_comparison(datafiles):
 
                 y = np.array(datafile.get(metric, "float"))
                 valid = ~np.isnan(y)
+
+                # Remove picos absurdos (glitches do MangoHud) em frametime/fps
+                if metric == "frametime":
+                    valid &= (y < 1000)      # descarta frames > 1 s
+                elif metric == "fps":
+                    valid &= (y > 1)         # descarta fps ~0 do glitch
 
                 if len(valid) == 0 or not valid.any():
                     continue
